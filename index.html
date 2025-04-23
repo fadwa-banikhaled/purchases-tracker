@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8" />
+    <title>مشترياتي</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            direction: rtl;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        input, button, select {
+            padding: 8px;
+            margin: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .actions button {
+            margin: 0 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>مشترياتي</h1>
+
+    <input type="text" id="product" placeholder="المنتج" />
+    <input type="number" id="price" placeholder="السعر" />
+    <input type="text" id="store" placeholder="المكان" />
+    <button onclick="addProduct()">إضافة</button>
+
+    <br>
+    <input type="text" id="search" placeholder="بحث..." oninput="renderTable()" />
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>المنتج</th>
+                <th>السعر</th>
+                <th>المكان</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbwGVUgYwOoeYnYbCS5dIkrbIOcXPqNIxQIou3dEVJLK7k1p2-vDDgTcy3Oiirod0mQeNg/exec";
+
+    let data = [];
+
+    async function fetchData() {
+      const res = await fetch(`${API_URL}?action=get`);
+      const result = await res.json();
+      data = result.slice(1); // بدون رؤوس الجدول
+      renderTable();
+    }
+
+    function renderTable() {
+      const keyword = document.getElementById('search').value.toLowerCase();
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      data.forEach((row, index) => {
+        if (row.join(" ").toLowerCase().includes(keyword)) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${index + 2}</td>
+            <td><input value="${row[0]}" onchange="editRow(${index + 2}, 1, this.value)"></td>
+            <td><input value="${row[1]}" onchange="editRow(${index + 2}, 2, this.value)"></td>
+            <td><input value="${row[2]}" onchange="editRow(${index + 2}, 3, this.value)"></td>
+            <td class="actions">
+              <button onclick="deleteRow(${index + 2})">🗑️ حذف</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      });
+    }
+
+    async function addProduct() {
+      const product = document.getElementById("product").value;
+      const price = document.getElementById("price").value;
+      const store = document.getElementById("store").value;
+      if (!product || !price || !store) return alert("الرجاء تعبئة جميع الحقول");
+
+      await fetch(`${API_URL}?action=add&product=${encodeURIComponent(product)}&price=${price}&store=${encodeURIComponent(store)}`);
+      document.getElementById("product").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("store").value = "";
+      fetchData();
+    }
+
+    async function deleteRow(row) {
+      await fetch(`${API_URL}?action=delete&row=${row}`);
+      fetchData();
+    }
+
+    async function editRow(row, col, value) {
+      const rowData = data[row - 2];
+      if (!rowData) return;
+
+      const newProduct = (col === 1) ? value : rowData[0];
+      const newPrice   = (col === 2) ? value : rowData[1];
+      const newStore   = (col === 3) ? value : rowData[2];
+
+      await fetch(`${API_URL}?action=edit&row=${row}&product=${encodeURIComponent(newProduct)}&price=${newPrice}&store=${encodeURIComponent(newStore)}`);
+      fetchData();
+    }
+
+    fetchData();
+    </script>
+</body>
+</html>
