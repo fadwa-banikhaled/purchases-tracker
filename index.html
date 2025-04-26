@@ -4,39 +4,90 @@
     <meta charset="UTF-8" />
     <title>مشترياتي</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            direction: rtl;
-            padding: 20px;
-            background-color: #f7f7f7;
-        }
-
-        h1 {
-            color: #333;
-        }
-
-        input, button, select {
-            padding: 8px;
-            margin: 5px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: #fff;
-        }
-
-        th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .actions button {
-            margin: 0 3px;
-        }
-    </style>
+      /* موجود بالفعل */
+      body {
+          font-family: 'Arial', sans-serif;
+          direction: rtl;
+          padding: 20px;
+          background-color: #f7f7f7;
+      }
+  
+      h1 {
+          color: #333;
+          text-align: center;
+      }
+  
+      input, button, select {
+          padding: 10px;
+          margin: 5px;
+          font-size: 16px;
+      }
+  
+      table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+          background-color: #fff;
+          overflow-x: auto;
+      }
+  
+      th, td {
+          border: 1px solid #ccc;
+          padding: 12px;
+          text-align: center;
+          font-size: 16px;
+      }
+  
+      .actions button {
+          margin: 0 3px;
+          padding: 6px 12px;
+          font-size: 14px;
+      }
+  
+      #selectedList {
+          overflow-x: auto;
+      }
+  
+      /* تحسين عرض الجوال */
+      @media (max-width: 768px) {
+          input, button, select {
+              width: 100%;
+              margin: 8px 0;
+          }
+  
+          table, thead, tbody, th, td, tr {
+              display: block;
+          }
+  
+          thead tr {
+              display: none;
+          }
+  
+          td {
+              border: none;
+              position: relative;
+              padding-left: 50%;
+              text-align: right;
+          }
+  
+          td::before {
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              white-space: nowrap;
+              font-weight: bold;
+              color: #555;
+          }
+  
+          td:nth-child(1)::before { content: "تحديد"; }
+          td:nth-child(2)::before { content: "#"; }
+          td:nth-child(3)::before { content: "المنتج"; }
+          td:nth-child(4)::before { content: "السعر"; }
+          td:nth-child(5)::before { content: "المكان"; }
+          td:nth-child(6)::before { content: "إجراءات"; }
+      }
+  </style>
+  
 </head>
 <body>
     <h1>مشترياتي</h1>
@@ -49,9 +100,20 @@
     <br>
     <input type="text" id="search" placeholder="بحث..." oninput="renderTable()" />
 
+    <button onclick="showSelectedList()">عرض القائمة المختارة</button>
+
+<div id="selectedList" style="margin-top: 20px; background: #fff; padding: 10px; display:none;">
+  <h3>القائمة المختارة</h3>
+  <ul id="selectedItems"></ul>
+  <p><strong>المجموع:</strong> <span id="totalPrice">0</span> ريال</p>
+</div>
+
+<button onclick="downloadAsExcel()">⬇️ تحميل كملف </button>
+
     <table>
         <thead>
             <tr>
+                <th>تحديد</th>
                 <th>#</th>
                 <th>المنتج</th>
                 <th>السعر</th>
@@ -82,15 +144,19 @@
       data.forEach((row, index) => {
         if (row.join(" ").toLowerCase().includes(keyword)) {
           const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${index + 2}</td>
-            <td><input value="${row[0]}" onchange="editRow(${index + 2}, 1, this.value)"></td>
-            <td><input value="${row[1]}" onchange="editRow(${index + 2}, 2, this.value)"></td>
-            <td><input value="${row[2]}" onchange="editRow(${index + 2}, 3, this.value)"></td>
-            <td class="actions">
+          let checked = ""; // يمكننا لاحقًا حفظ الاختيارات في مصفوفة إن لزم
+           tr.innerHTML = `
+             <td><input type="checkbox" class="select-product" data-index="${index}"></td>
+             <td>${index + 2}</td>
+             <td><input value="${row[0]}" onchange="editRow(${index + 2}, 1, this.value)"></td>
+             <td><input value="${row[1]}" onchange="editRow(${index + 2}, 2, this.value)"></td>
+             <td><input value="${row[2]}" onchange="editRow(${index + 2}, 3, this.value)"></td>
+             <td class="actions">
               <button onclick="deleteRow(${index + 2})">🗑️ حذف</button>
-            </td>
-          `;
+              <button onclick="editProduct(${index + 2})">✏️ تعديل</button>
+             </td>
+`;
+
           tbody.appendChild(tr);
         }
       });
@@ -114,17 +180,108 @@
       fetchData();
     }
 
-    async function editRow(row, col, value) {
-      const rowData = data[row - 2];
-      if (!rowData) return;
+    async function editProduct(row) {
+  const rowData = data[row - 2];
+  if (!rowData) return;
 
-      const newProduct = (col === 1) ? value : rowData[0];
-      const newPrice   = (col === 2) ? value : rowData[1];
-      const newStore   = (col === 3) ? value : rowData[2];
+  // نافذة منبثقة لتعديل البيانات
+  const newProduct = prompt("تعديل المنتج:", rowData[0]);
+  const newPrice = prompt("تعديل السعر:", rowData[1]);
+  const newStore = prompt("تعديل المكان:", rowData[2]);
 
-      await fetch(`${API_URL}?action=edit&row=${row}&product=${encodeURIComponent(newProduct)}&price=${newPrice}&store=${encodeURIComponent(newStore)}`);
-      fetchData();
-    }
+  if (newProduct !== null && newPrice !== null && newStore !== null) {
+    // التعديل عبر API باستخدام fetch
+    await fetch(`${API_URL}?action=edit&row=${row}&product=${encodeURIComponent(newProduct)}&price=${newPrice}&store=${encodeURIComponent(newStore)}`);
+    fetchData(); // تحديث الجدول بعد التعديل
+  }
+}
+
+
+    function showSelectedList() {
+  const selectedList = document.getElementById("selectedList");
+  const selectedItems = document.getElementById("selectedItems");
+  const totalPrice = document.getElementById("totalPrice");
+
+  selectedItems.innerHTML = ""; // نستخدمه لوضع جدول المنتجات لاحقًا
+  let table = `<table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+                  <thead>
+                    <tr>
+                      <th style="border: 1px solid #ccc; padding: 10px;">المنتج</th>
+                      <th style="border: 1px solid #ccc; padding: 10px;">السعر</th>
+                      <th style="border: 1px solid #ccc; padding: 10px;">المكان</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+
+  let total = 0;
+  const checkboxes = document.querySelectorAll(".select-product:checked");
+
+  checkboxes.forEach(cb => {
+    const index = parseInt(cb.dataset.index);
+    const row = data[index];
+    const name = row[0];
+    const price = parseFloat(row[1]) || 0;
+    const store = row[2];
+
+    total += price;
+
+    table += `<tr>
+                <td style="border: 1px solid #ccc; padding: 10px;">${name}</td>
+                <td style="border: 1px solid #ccc; padding: 10px;">${price} ريال</td>
+                <td style="border: 1px solid #ccc; padding: 10px;">${store}</td>
+              </tr>`;
+  });
+
+  table += `</tbody></table>`;
+
+  selectedItems.innerHTML = table;
+  totalPrice.textContent = total;
+
+  selectedList.style.display = "block";
+}
+
+
+
+
+function downloadAsExcel() {
+  const checkboxes = document.querySelectorAll(".select-product:checked");
+  if (checkboxes.length === 0) {
+    alert("لم يتم اختيار أي منتج.");
+    return;
+  }
+
+  let csvContent = "المنتج,السعر,المكان\n";
+  let total = 0;
+
+  checkboxes.forEach(cb => {
+    const index = parseInt(cb.dataset.index);
+    const row = data[index];
+    const name = row[0];
+    const price = parseFloat(row[1]) || 0;
+    const store = row[2];
+
+    total += price;
+
+    csvContent += `"${name}","${price}","${store}"\n`;
+  });
+
+  // نضيف سطر المجموع
+  csvContent += `"مجموع الأسعار","${total}","ريال"\n`;
+
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "المشتريات.csv";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+
+
 
     fetchData();
     </script>
