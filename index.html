@@ -94,8 +94,18 @@
 
     <input type="text" id="product" placeholder="المنتج" />
     <input type="number" id="price" placeholder="السعر" />
-    <input type="text" id="store" placeholder="المكان" />
-    <button onclick="addProduct()">إضافة</button>
+
+    <select id="storeSelect" onchange="toggleCustomStore(this)">
+      <option value="">-- اختر المكان --</option>
+      <option value="لولو هايبرماركت">لولو هايبرماركت</option>
+      <option value="النعسان">النعسان</option>
+      <option value="طيف الهرم">طيف الهرم</option>
+      <option value="اسواق و مخابز فتاح">اسواق و مخابز فتاح</option>
+      <option value="أسواق المزون">أسواق المزون</option>
+      <option value="أخرى">أخرى...</option>
+    </select>
+    <input type="text" id="customStore" placeholder="اكتب المكان" style="display:none;" />
+        <button onclick="addProduct()">إضافة</button>
 
     <br>
     <input type="text" id="search" placeholder="بحث..." oninput="renderTable()" />
@@ -163,17 +173,38 @@
     }
 
     async function addProduct() {
-      const product = document.getElementById("product").value;
-      const price = document.getElementById("price").value;
-      const store = document.getElementById("store").value;
-      if (!product || !price || !store) return alert("الرجاء تعبئة جميع الحقول");
+  const product = document.getElementById("product").value;
+  const price = document.getElementById("price").value;
 
-      await fetch(`${API_URL}?action=add&product=${encodeURIComponent(product)}&price=${price}&store=${encodeURIComponent(store)}`);
-      document.getElementById("product").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("store").value = "";
-      fetchData();
-    }
+  let store = document.getElementById("storeSelect").value;
+  const customStore = document.getElementById("customStore").value;
+  if (store === "أخرى") {
+    store = customStore;
+  }
+
+  if (!product || !price || !store) return alert("الرجاء تعبئة جميع الحقول");
+
+  await fetch(`${API_URL}?action=add&product=${encodeURIComponent(product)}&price=${price}&store=${encodeURIComponent(store)}`);
+  document.getElementById("product").value = "";
+  document.getElementById("price").value = "";
+  document.getElementById("storeSelect").value = "";
+  document.getElementById("customStore").value = "";
+  document.getElementById("customStore").style.display = "none";
+
+  fetchData();
+}
+
+
+    function toggleCustomStore(select) {
+  const customInput = document.getElementById("customStore");
+  if (select.value === "أخرى") {
+    customInput.style.display = "inline-block";
+  } else {
+    customInput.style.display = "none";
+    customInput.value = ""; // مسح الحقل في حال تغييره لاحقًا
+  }
+}
+
 
     async function deleteRow(row) {
       await fetch(`${API_URL}?action=delete&row=${row}`);
