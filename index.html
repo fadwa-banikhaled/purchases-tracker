@@ -138,11 +138,14 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbwGVUgYwOoeYnYbCS5dIkrbIOcXPqNIxQIou3dEVJLK7k1p2-vDDgTcy3Oiirod0mQeNg/exec";
 
     let data = [];
+let selectedIndices = new Set(); // نحفظ فيها أرقام الصفوف المحددة
 
     async function fetchData() {
       const res = await fetch(`${API_URL}?action=get`);
       const result = await res.json();
       data = result.slice(1); // بدون رؤوس الجدول
+        selectedIndices.clear(); // لأن البيانات الجديدة تعني أن الفهارس قد تغيرت
+
       renderTable();
     }
 
@@ -154,9 +157,11 @@
       data.forEach((row, index) => {
         if (row.join(" ").toLowerCase().includes(keyword)) {
           const tr = document.createElement("tr");
-          let checked = ""; // يمكننا لاحقًا حفظ الاختيارات في مصفوفة إن لزم
-           tr.innerHTML = `
-             <td><input type="checkbox" class="select-product" data-index="${index}"></td>
+        
+            const isChecked = selectedIndices.has(index) ? "checked" : "";
+             tr.innerHTML = `
+            <td><input type="checkbox" class="select-product" data-index="${index}" ${isChecked}></td>
+
              <td>${index + 2}</td>
              <td><input value="${row[0]}" onchange="editRow(${index + 2}, 1, this.value)"></td>
              <td><input value="${row[1]}" onchange="editRow(${index + 2}, 2, this.value)"></td>
@@ -168,6 +173,15 @@
 `;
 
           tbody.appendChild(tr);
+            
+            tr.querySelector(".select-product").addEventListener("change", function() {
+             if (this.checked) {
+             selectedIndices.add(index);
+             } else {
+              selectedIndices.delete(index);
+  }
+});
+
         }
       });
     }
